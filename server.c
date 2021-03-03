@@ -86,8 +86,12 @@ int main(int argc, char const *argv[])
     // attempts to create socket
     if ((server = socket(AF_INET, SOCK_STREAM, 0)) == 0) error(SOCKETCREATIONFAILED);
        
-    // sets socket options
-    if (setsockopt(server, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) error(SOCKETOPTIONSFAILED);
+    // sets socket options, If an apple device then do not use REUSEPORT
+    #ifdef __APPLE__
+        if (setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) error(SOCKETOPTIONSFAILED);
+    #else
+        if (setsockopt(server, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) error(SOCKETOPTIONSFAILED);
+    #endif
 
     // configures address
     address.sin_family = AF_INET; 
