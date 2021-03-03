@@ -7,8 +7,6 @@
 #include "./constants.h"
 #include "./shared.h"
 
-#define PORT 8080 
-
 /**
  * Main function
  * @param argc number of command line arguments
@@ -21,27 +19,18 @@ int main(int argc, char const *argv[])
     int sock = 0; 
     struct sockaddr_in serv_addr; 
     
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
-    { 
-        printf("\n Socket creation error \n"); 
-        return -1; 
-    } 
+    // Attempts to create socket
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) error(SOCKETCREATIONFAILED);
    
+    // Sets up server address
     serv_addr.sin_family = AF_INET; 
     serv_addr.sin_port = htons(PORT); 
        
     // Convert IPv4 and IPv6 addresses from text to binary form 
-    if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0)  
-    { 
-        printf("\nInvalid address/ Address not supported \n"); 
-        return -1; 
-    } 
+    if(inet_pton(AF_INET, ADDRESS, &serv_addr.sin_addr)<=0) error(INVALIDADDRESS);
    
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
-    { 
-        printf("\nConnection Failed \n"); 
-        return -1; 
-    } 
+    // attempt to connect to server
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) error(SOCKETCONNECTIONFAILED);
 
     unsigned int len = strlen(argv[1]);
     write(sock, &len, sizeof(len));

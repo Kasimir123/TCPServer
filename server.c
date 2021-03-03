@@ -8,8 +8,6 @@
 #include "./constants.h"
 #include "./shared.h"
 
-// Connection Information
-#define PORT 8080 
 
 // Functional Values
 #define ERRORVAL -1
