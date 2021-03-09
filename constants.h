@@ -11,3 +11,7 @@
 #define SOCKETCONNECTIONFAILED "Failed To Connect Socket"
 #define FORKFAILED "Failed To Fork Process"
 #define INVALIDADDRESS "Invalid Address"
+
+// Client Flags
+#define TEXTFLAG "-t"
+#define FILEFLAG "-f"
