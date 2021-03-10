@@ -86,6 +86,53 @@ int main(int argc, char const *argv[])
     // Else if the first argument is the file flag go here
     else if (!strcmp(argv[1], FILEFLAG))
     {
+        // If too many/little arguments then print usage and exit
+        if (argc != 3) usage();
+
+        // initializes file descriptor
+        FILE *fd;
+
+        // Opens file to read
+        fd = fopen(argv[2], "rb");
+
+        // If file could not be opened then error
+        if (fd == NULL) error(FILEOPENFAILED);
+
+        // Seek the end of the file
+        fseek(fd, 0, SEEK_END);
+
+        // Put end of file into unsigned long
+        unsigned long fileSize = ftell(fd);
+        
+        // rewinds the file
+        rewind(fd);
+
+        // mallocs space for all of the file data
+        char *data = (char*)malloc(fileSize);
+
+        // sends file flag
+        send(sock, "f", 1, 0);
+
+        // Gets length of the file name
+        unsigned int nameLength = strlen(getFileName(argv[2]));
+
+        // send length of file name
+        write(sock, &nameLength, sizeof(nameLength));
+
+        // send file name
+        send(sock, getFileName(argv[2]), nameLength, 0);
+
+        // send size of file
+        write(sock, &fileSize, sizeof(fileSize));
+
+        // read in file data
+        fread(data, 1, fileSize, fd);
+
+        // send file data
+        send(sock, data, fileSize, 0);
+
+        // close file
+        fclose(fd);
 
     }
     // Else print usage

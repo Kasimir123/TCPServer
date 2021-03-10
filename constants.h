@@ -11,7 +11,11 @@
 #define SOCKETCONNECTIONFAILED "Failed To Connect Socket"
 #define FORKFAILED "Failed To Fork Process"
 #define INVALIDADDRESS "Invalid Address"
+#define FILEOPENFAILED "File could not be opened"
 
 // Client Flags
 #define TEXTFLAG "-t"
 #define FILEFLAG "-f"
+
+// Values
+#define BLOCKSIZE 1024
