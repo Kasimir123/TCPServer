@@ -33,3 +33,6 @@ server
 *.out
 *.app
 
+# Ignore Testing
+bin/
+.DS_STORE

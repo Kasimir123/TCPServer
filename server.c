@@ -9,10 +9,17 @@
 #include "./shared.h"
 
 #include <arpa/inet.h>
+#include <sys/stat.h>
 
 // Functional Values
 #define ERRORVAL -1
 #define SOCKETBACKLOG 3
+
+// Output constants
+// Set to 1 to output to terminal, 0 to output to specified file
+#define OUTPUTTOCOMMANDLINE 0
+#define OUTPUTPATH "bin/"
+#define LOGFILE "log.txt"
 
 /**
  * Fills passed char pointer with ip address for address structure that was passed
@@ -41,8 +48,104 @@ void logText(unsigned int len, char *buffer, struct sockaddr_in address)
     // Gets the sender IP Address
     getSender(sendIp, address);
 
-    // Prints out message
-    fprintf(stdout, ": TEXT : %s : Length: %d : Message: %s\n", sendIp, len, buffer);
+// Prints out message
+#if OUTPUTTOCOMMANDLINE == 1
+    fprintf(stdout, ": TEXT : %s : %s : Length: %d : Message: %s\n\n", sendIp, getTime(), len, buffer);
+#else
+    // Gets log file string
+    char *logFile = concat(OUTPUTPATH, LOGFILE);
+
+    // Opens file to write
+    FILE *fd = fopen(logFile, "a");
+
+    // Logs text
+    fprintf(fd, ": TEXT : %s : %s : Length: %d : Message: %s\n\n", sendIp, getTime(), len, buffer);
+    
+    // Closes file
+    fclose(fd);
+
+    // Frees log file string
+    free(logFile);
+
+#endif
+}
+
+/**
+ * Logs the file
+ * @param nameLength length of file name
+ * @param fileName file name string
+ * @param dataLen length of file data
+ * @param data file data
+ * @param address socket address used for parsing incoming ip
+ */
+void logFile(unsigned int nameLength, char *fileName, unsigned long dataLen, char *data, struct sockaddr_in address)
+{
+    // Defines the ip char buffer
+    char sendIp[INET_ADDRSTRLEN];
+
+    // Gets the sender IP Address
+    getSender(sendIp, address);
+
+    // Gets the time the file was sent over (not exact but close enough)
+    char *timeStr = getTime();
+
+// Prints out message
+#if OUTPUTTOCOMMANDLINE == 1
+    fprintf(stdout, ": FILE : %s : %s : Length: %lu : File Name: %s\n\n", sendIp, timeStr, dataLen, fileName);
+#else
+
+    // Creates log file string
+    char *logFile = concat(OUTPUTPATH, LOGFILE);
+
+    // Opens log file
+    FILE *fd = fopen(logFile, "a");
+
+    // Writes file information
+    fprintf(fd, ": FILE : %s : %s : Length: %lu : File Name: %s\n\n", sendIp, timeStr, dataLen, fileName);
+    
+    // Close log file
+    fclose(fd);
+
+    // Frees log file string
+    free(logFile);
+
+#endif
+
+    // Gets temporary path to ip folder
+    char *temp = concat(OUTPUTPATH, sendIp);
+
+    // Initializes stat structure
+    struct stat st;
+
+    // If the folder does not exist then make it
+    if (stat(temp, &st) == -1)
+        mkdir(temp, 664);
+
+    // Gets directory with / at the end
+    char *ipDir = concat(temp, "/");
+
+    // Frees the first string
+    free(temp);
+
+    // Gets real name of the file, current time plus filename
+    char *realName = concat(timeStr, fileName);
+
+    // Gets the fulle file path
+    char *filePath = concat(ipDir, realName);
+
+    // Opens the file
+    FILE *fp = fopen(filePath, "wb");
+
+    // Writes the file data
+    fwrite(data, sizeof(char), sizeof(char) * dataLen, fp);
+
+    // Closes the file
+    fclose(fp);
+
+    // Frees all remaining strings
+    free(filePath);
+    free(ipDir);
+    free(realName);
 }
 
 /**
@@ -79,8 +182,6 @@ void readBytes(int socket, unsigned int len, void *buffer)
  */
 void handleConnection(int sock, struct sockaddr_in address)
 {
-    // Need to update this data structure so that client and server always match
-    unsigned int dataLen = 0;
 
     // declare command char
     char command;
@@ -89,8 +190,11 @@ void handleConnection(int sock, struct sockaddr_in address)
     readBytes(sock, sizeof(command), (void *)(&command));
 
     // if text flag
-    if (!strcmp(&command, "t"))
+    if (command == 't')
     {
+        // Need to update this data structure so that client and server always match
+        unsigned int dataLen;
+
         // Reads the first segment from the TCP header, data length
         readBytes(sock, sizeof(dataLen), (void *)(&dataLen));
 
@@ -100,18 +204,48 @@ void handleConnection(int sock, struct sockaddr_in address)
         // reads the data we were sent
         readBytes(sock, dataLen, (void *)buffer);
 
+        // Logs the message
         logText(dataLen, buffer, address);
 
         // frees the buffer
         free(buffer);
     }
     // else if file flag
-    else if (!strcmp(&command, "f"))
+    else if (command == 'f')
     {
+        // initializes unsigned int for name length
+        unsigned int nameLen;
 
+        // reads length of file name
+        readBytes(sock, sizeof(nameLen), (void *)(&nameLen));
+
+        // mallocs space for the filename
+        char *fileName = malloc(nameLen);
+
+        // Reads the name of the file
+        readBytes(sock, nameLen, (void *)fileName);
+
+        // initializes unsigned long for file data
+        unsigned long dataLen;
+
+        // Reads the first segment from the TCP header, data length
+        readBytes(sock, sizeof(dataLen), (void *)(&dataLen));
+
+        // mallocs enough space for the buffer
+        char *data = malloc(dataLen);
+
+        // reads the data we were sent
+        readBytes(sock, dataLen, (void *)data);
+
+        // Logs the message
+        logFile(nameLen, fileName, dataLen, data, address);
+
+        // frees the file name
+        free(fileName);
+
+        // frees the file data
+        free(data);
     }
-
-    
 }
 
 /**
